@@ -21,6 +21,7 @@ app.use(cors({
 }));
 
 const users = require('./Routes/User');
+const product = require('./Routes/Product');
 
 app.use(
   cors({
@@ -31,7 +32,8 @@ app.use(
 
 
 
-app.use('/api/v1',users);
+app.use('/api/v1', users);
+app.use('/api/v1', product)
 app.use(errorMiddleware);
 
 module.exports = app;
