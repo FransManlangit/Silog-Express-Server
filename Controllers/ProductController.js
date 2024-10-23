@@ -5,60 +5,50 @@ const mongoose = require("mongoose");
 const APIFeatures = require("../Utils/ApiFeatures");
 
 
-
 const createProduct = async (req, res, next) => {
   try {
-    const { name, price, description } = req.body;
-    let images = req.body.images;
+    // Ensure that the images input is handled correctly as an array
+    let images = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
 
-    console.log("Request body received:", req.body);
+    // Check if there are valid images to upload
+    const imagesLinks = await Promise.all(images.map(async (image) => {
+      const result = await cloudinary.v2.uploader.upload(image, {
+        folder: 'products'
+      });       
 
-    // Ensure images is an array
-    if (images && !Array.isArray(images)) {
-      images = [images];
-    }
+      return {
+        public_id: result.public_id,
+        url: result.secure_url
+      };
+    }));
 
-    console.log("Images after ensuring array format:", images);
+    // Assign the uploaded image links to req.body.images
+    req.body.images = imagesLinks;
 
-    let uploadImages = [];
-   
-    if (images && images.length > 0) {
-      for (const image of images) {
-        console.log(image, "image for");
-
-        const cloudinaryFolderOption = { folder: "product" };
-
-        const result = await cloudinary.v2.uploader.upload(
-          image,
-          cloudinaryFolderOption
-        );
-
-        uploadImages.push({
-          public_id: result.public_id,
-          url: result.secure_url,
-        });
-      }
-    }
-
-    console.log("Images uploaded successfully:", uploadImages);
-
-    // Create the product with the uploaded images
+    // Create the product with the provided data
     const product = await ProductModel.create({
-      name,
-      price,
-      description,
-      images: uploadImages,
+      name: req.body.name,
+      price: req.body.price,
+      description: req.body.description,
+      images: req.body.images
     });
 
-    console.log("Product created successfully:", product);
-
-    // Send response with created product
-    res.status(201).json({ success: true, product });
+    // Return the created product in the response
+    res.status(201).json({
+      success: true,
+      product
+    });
   } catch (error) {
     console.error("Error creating product:", error);
-    res.status(500).json({ message: "Failed to create product" });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create product'
+    });
   }
 };
+
+
+
 
 
 const getSingleProduct = async (req, res, next) => {
