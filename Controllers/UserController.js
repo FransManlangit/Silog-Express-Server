@@ -13,12 +13,12 @@ const registerUser = async (req, res, next) => {
       email: req.body.email,
     });
     const existingPhoneUser = await UserModel.findOne({
-      phone: req.body.phone,
+      mobilenumber: req.body.mobilenumber,
     });
 
     if (existingEmailUser && existingPhoneUser) {
       return next(
-        new ErrorHandler("Email and phone number already exist!", 400)
+        new ErrorHandler("Email and mobile number already exist!", 400)
       );
     }
 
@@ -27,15 +27,15 @@ const registerUser = async (req, res, next) => {
     }
 
     if (existingPhoneUser) {
-      return next(new ErrorHandler("Phone number already taken!", 400));
+      return next(new ErrorHandler("Mobile number already taken!", 400));
     }
 
-    const { firstname, lastname, phone, email, password } = req.body;
+    const { firstname, lastname, mobilenumber, email, password } = req.body;
 
     const user = await UserModel.create({
       firstname,
       lastname,
-      phone,
+      mobilenumber,
       email,
       password,
     });
@@ -252,20 +252,20 @@ const getUserProfile = async (req, res, next) => {
 
 
 const updateProfile = async (req, res, next) => {
-  const { firstname, lastname, phone, avatar } = req.body;
+  const { firstname, lastname, mobilenumber, avatar } = req.body;
 
   const newUserData = {
     firstname,
     lastname,
-    phone,
+    mobilenumber,
   };
 
   try {
-    const phoneExists = await User.findOne({ phone, _id: { $ne: req.user.id } });
+    const phoneExists = await User.findOne({ mobilenumber, _id: { $ne: req.user.id } });
     if (phoneExists) {
       return res.status(400).json({
         success: false,
-        message: "Phone number already exists",
+        message: "Mobile number already exists",
       });
     }
 

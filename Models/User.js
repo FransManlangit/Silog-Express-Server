@@ -32,9 +32,9 @@ const userSchema = new mongoose.Schema({
   gender: {
     type: String,
   },
-  phone: {
+  mobilenumber: {
     type: String,
-    required: [true, "Please enter your phone number"],
+    required: [true, "Please enter your mobile number number"],
     unique: true,
   },
   avatar: {
