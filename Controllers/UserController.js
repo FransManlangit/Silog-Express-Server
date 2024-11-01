@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const TokenModel = require("../Models/Token");
 const NotificationModel = require("../Models/Notification");
+const cloudinary = require('cloudinary').v2;
 
 const registerUser = async (req, res, next) => {
   try {
@@ -261,7 +262,7 @@ const updateProfile = async (req, res, next) => {
   };
 
   try {
-    const phoneExists = await User.findOne({ mobilenumber, _id: { $ne: req.user.id } });
+    const phoneExists = await UserModel.findOne({ mobilenumber, _id: { $ne: req.user.id } });
     if (phoneExists) {
       return res.status(400).json({
         success: false,
@@ -269,20 +270,34 @@ const updateProfile = async (req, res, next) => {
       });
     }
 
-    if (avatar) {
-      const cloudinaryFolderOption = {
-        folder: "users",
-      };
+    if (req.body.avatar) { // Adjusted check for avatar
+      const user = await UserModel.findById(req.user.id);
 
-      const result = await cloudinary.uploader.upload(avatar, cloudinaryFolderOption);
+      // Check if the user has an existing avatar
+      if (user.avatar && user.avatar.public_id) {
+        const image_id = user.avatar.public_id;
+
+        // Destroy the previous avatar
+        await cloudinary.uploader.destroy(image_id); // Fixed reference to cloudinary
+      }
+
+      // Upload the new avatar
+      const uploadResult = await cloudinary.uploader.upload(
+        req.body.avatar,
+        {
+          folder: "avatars",
+          width: 150,
+          crop: "scale",
+        }
+      );
 
       newUserData.avatar = {
-        public_id: result.public_id,
-        url: result.secure_url,
+        public_id: uploadResult.public_id,
+        url: uploadResult.secure_url,
       };
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+    const user = await UserModel.findByIdAndUpdate(req.user.id, newUserData, {
       new: true,
       runValidators: true,
     });
