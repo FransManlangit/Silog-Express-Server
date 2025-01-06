@@ -4,62 +4,77 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
-const userSchema = new mongoose.Schema({
-  firstname: {
-    type: String,
-    required: [true, "Please enter your firstname"],
-    minlength: [3, "firstname must be at least 3 characters long."],
-    maxLength: [30, "Your name cannot exceed 30 characters"],
-  },
-  lastname: {
-    type: String,
-    required: [true, "Please enter your lastname"],
-    minlength: [3, "lastname must be at least 3 characters long."],
-    maxLength: [30, "Your name cannot exceed 30 characters"],
-  },
-  email: {
-    type: String,
-    required: [true, "Please enter your email"],
-    unique: true,
-    validate: [validator.isEmail, "Please eneter valid email address"],
-  },
-  password: {
-    type: String,
-    required: [true, "Please enter your password"],
-    minlength: [6, "Your password must be at least 6 characters long"],
-    select: false,
-  },
-  gender: {
-    type: String,
-  },
-  mobilenumber: {
-    type: String,
-    required: [true, "Please enter your mobile number number"],
-    unique: true,
-  },
-  avatar: {
-    public_id: {
+const userSchema = new mongoose.Schema(
+  {
+    firstname: {
       type: String,
+      required: [true, "Please enter your firstname"],
+      minlength: [3, "firstname must be at least 3 characters long."],
+      maxLength: [30, "Your firstname cannot exceed 30 characters"],
     },
-    url: {
+    lastname: {
       type: String,
+      required: [true, "Please enter your lastname"],
+      minlength: [3, "lastname must be at least 3 characters long."],
+      maxLength: [30, "Your lastname cannot exceed 30 characters"],
+    },
+    email: {
+      type: String,
+      required: [true, "Please enter your email"],
+      unique: true,
+      validate: [validator.isEmail, "Please enter a valid email address"],
+    },
+    password: {
+      type: String,
+      required: [true, "Please enter your password"],
+      minlength: [6, "Your password must be at least 6 characters long"],
+      select: false,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "non-binary", "other"],
+    },
+    mobilenumber: {
+      type: String,
+      required: [true, "Please enter your mobile number"],
+      unique: true,
+      validate: {
+        validator: function (value) {
+          return /^\+63\d{10}$/.test(value); // Validates Philippine mobile numbers
+        },
+        message: "Please enter a valid Philippine mobile number (e.g., +639123456789)",
+      },
+    },
+    avatar: {
+      public_id: {
+        type: String,
+        default: "default_avatar",
+      },
+      url: {
+        type: String,
+        default: "https://example.com/default-avatar.png",
+      },
+    },
+    role: {
+      type: String,
+      default: "user",
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+    lastLogin: {
+      type: Date,
+    },
+    deleted: {
+      type: Boolean,
+      default: false,
     },
   },
-  role: {
-    type: String,
-    default: "user",
-  },
-  verified: {
-    type: Boolean,
-    default: false,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-});
+  { timestamps: true }
+);
 
 userSchema.methods.getJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {

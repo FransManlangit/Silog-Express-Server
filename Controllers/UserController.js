@@ -8,31 +8,119 @@ const TokenModel = require("../Models/Token");
 const NotificationModel = require("../Models/Notification");
 const cloudinary = require('cloudinary').v2;
 
+// const registerUser = async (req, res, next) => {
+//   try {
+//     const existingEmailUser = await UserModel.findOne({
+//       email: req.body.email,
+//     });
+//     const existingPhoneUser = await UserModel.findOne({
+//       mobilenumber: req.body.mobilenumber,
+//     });
+
+//     if (existingEmailUser && existingPhoneUser) {
+//       return next(
+//         new ErrorHandler("Email and mobile number already exist!", 400)
+//       );
+//     }
+
+//     if (existingEmailUser) {
+//       return next(new ErrorHandler("Email address already exist!", 400));
+//     }
+
+//     if (existingPhoneUser) {
+//       return next(new ErrorHandler("Mobile number already taken!", 400));
+//     }
+
+//     const { firstname, lastname, mobilenumber, email, password } = req.body;
+
+//     const user = await UserModel.create({
+//       firstname,
+//       lastname,
+//       mobilenumber,
+//       email,
+//       password,
+//     });
+
+//     const token = await new TokenModel({
+//       verifyUser: user._id,
+//       token: crypto.randomBytes(32).toString("hex"),
+//       verificationTokenExpire: new Date(Date.now() + 2 * 60 * 1000),
+//     }).save();
+
+//     const emailVerification = `${process.env.FRONTEND_URL}/verify/email/${token.token}/${user._id}`;
+//     const emailContent = ` <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 15px; justify-content: center; align-items: center; height: 40vh;">
+//         <div style="background-color: #ffffff; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); text-align: center;">
+//             <h1 style="font-size: 24px; color: #333;">Email Verification Request</h1>
+//             <p style="font-size: 16px; color: #555;">Hello ${user.firstname},</p>
+//             <p style="font-size: 16px; color: #555;">Thank you for signing up with teamPOOR - Motorcycle Parts & Services. To complete your registration, please verify your email address by clicking the button below:</p>
+//             <p style="text-align: center;">
+//                 <a href="${emailVerification}" style="display: inline-block; background-color: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 10px; font-size: 16px;" target="_blank">Verify Email</a>
+//             </p>
+//             <p style="font-size: 16px; color: #555;">If you did not request this, you can safely ignore this email.</p>
+//             <p style="font-size: 16px; color: #555;">Please note: Your security is important to us. We will never ask you to share your password or other sensitive information via email.</p>
+//             <p style="font-size: 16px; color: #555;">Best regards,<br>Silog Express - Manager</p>
+//         </div>
+//     </div>`;
+
+//     await sendtoEmail(
+//       user.email,
+//       "SilogExpress - Verify Email",
+//       emailContent,
+//       true
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message: `Email sent to: ${user.email}. wait at least 3-5 minutes`,
+//     });
+//   } catch (error) {
+//     console.error(error); // Log the error for debugging
+//     res.status(500).json({
+//       success: false,
+//       message: "User registration failed",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 const registerUser = async (req, res, next) => {
   try {
-    const existingEmailUser = await UserModel.findOne({
-      email: req.body.email,
-    });
-    const existingPhoneUser = await UserModel.findOne({
-      mobilenumber: req.body.mobilenumber,
-    });
+    const { firstname, lastname, mobilenumber, email, password } = req.body;
+
+    // Validate required fields
+    if (!mobilenumber) {
+      return next(new ErrorHandler("Please enter your mobile number", 400));
+    }
+
+    if (!/^\+63\d{10}$/.test(mobilenumber)) {
+      return next(
+        new ErrorHandler(
+          "Invalid mobile number format. Use +63 followed by 10 digits (e.g., +639123456789).",
+          400
+        )
+      );
+    }
+
+    // Check for duplicate email and mobile number
+    const existingEmailUser = await UserModel.findOne({ email });
+    const existingPhoneUser = await UserModel.findOne({ mobilenumber });
 
     if (existingEmailUser && existingPhoneUser) {
       return next(
-        new ErrorHandler("Email and mobile number already exist!", 400)
+        new ErrorHandler("Both email and mobile number already exist!", 400)
       );
     }
 
     if (existingEmailUser) {
-      return next(new ErrorHandler("Email address already exist!", 400));
+      return next(new ErrorHandler("Email address already exists!", 400));
     }
 
     if (existingPhoneUser) {
       return next(new ErrorHandler("Mobile number already taken!", 400));
     }
 
-    const { firstname, lastname, mobilenumber, email, password } = req.body;
-
+    // Create new user
     const user = await UserModel.create({
       firstname,
       lastname,
@@ -41,26 +129,29 @@ const registerUser = async (req, res, next) => {
       password,
     });
 
+    // Generate email verification token
     const token = await new TokenModel({
       verifyUser: user._id,
       token: crypto.randomBytes(32).toString("hex"),
-      verificationTokenExpire: new Date(Date.now() + 2 * 60 * 1000),
+      verificationTokenExpire: new Date(Date.now() + 2 * 60 * 1000), // 2 minutes expiration
     }).save();
 
     const emailVerification = `${process.env.FRONTEND_URL}/verify/email/${token.token}/${user._id}`;
-    const emailContent = ` <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 15px; justify-content: center; align-items: center; height: 40vh;">
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 15px; justify-content: center; align-items: center; height: 40vh;">
         <div style="background-color: #ffffff; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); text-align: center;">
-            <h1 style="font-size: 24px; color: #333;">Email Verification Request</h1>
-            <p style="font-size: 16px; color: #555;">Hello ${user.firstname},</p>
-            <p style="font-size: 16px; color: #555;">Thank you for signing up with teamPOOR - Motorcycle Parts & Services. To complete your registration, please verify your email address by clicking the button below:</p>
-            <p style="text-align: center;">
-                <a href="${emailVerification}" style="display: inline-block; background-color: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 10px; font-size: 16px;" target="_blank">Verify Email</a>
-            </p>
-            <p style="font-size: 16px; color: #555;">If you did not request this, you can safely ignore this email.</p>
-            <p style="font-size: 16px; color: #555;">Please note: Your security is important to us. We will never ask you to share your password or other sensitive information via email.</p>
-            <p style="font-size: 16px; color: #555;">Best regards,<br>Silog Express - Manager</p>
+          <h1 style="font-size: 24px; color: #333;">Email Verification Request</h1>
+          <p style="font-size: 16px; color: #555;">Hello ${user.firstname},</p>
+          <p style="font-size: 16px; color: #555;">Thank you for signing up with teamPOOR - Motorcycle Parts & Services. To complete your registration, please verify your email address by clicking the button below:</p>
+          <p style="text-align: center;">
+            <a href="${emailVerification}" style="display: inline-block; background-color: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 10px; font-size: 16px;" target="_blank">Verify Email</a>
+          </p>
+          <p style="font-size: 16px; color: #555;">If you did not request this, you can safely ignore this email.</p>
+          <p style="font-size: 16px; color: #555;">Please note: Your security is important to us. We will never ask you to share your password or other sensitive information via email.</p>
+          <p style="font-size: 16px; color: #555;">Best regards,<br>Silog Express - Manager</p>
         </div>
-    </div>`;
+      </div>
+    `;
 
     await sendtoEmail(
       user.email,
@@ -71,7 +162,7 @@ const registerUser = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `Email sent to: ${user.email}. wait at least 3-5 minutes`,
+      message: `Email sent to: ${user.email}. Wait at least 3-5 minutes.`,
     });
   } catch (error) {
     console.error(error); // Log the error for debugging
@@ -82,6 +173,9 @@ const registerUser = async (req, res, next) => {
     });
   }
 };
+
+
+
 
 const verifyUserEmail = async (req, res, next) => {
   try {

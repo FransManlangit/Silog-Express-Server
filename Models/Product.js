@@ -1,5 +1,26 @@
 const mongoose = require("mongoose");
 
+
+const stockHistorySchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+        },
+        quantity: {
+            type: Number,
+        },
+        status: {
+            type: String,
+        },
+        by: {
+            type: String,
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
 const productSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -23,6 +44,10 @@ const productSchema = new mongoose.Schema({
             required: true,
         },
     }],
+    stock: {
+        type: Number,
+        default: 0,
+    },
     ratings: {
         type: Number,
         default: 0,
@@ -60,6 +85,8 @@ const productSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+
+    stockLogs: [stockHistorySchema],
 
 });
 
